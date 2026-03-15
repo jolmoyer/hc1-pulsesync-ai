@@ -19,9 +19,7 @@ TWIML_GREET_AND_RECORD = """<?xml version="1.0" encoding="UTF-8"?>
     <Say voice="Polly.Joanna">
         Thank you for calling. Please leave a message after the tone and we will follow up shortly.
     </Say>
-    <Record maxLength="300" playBeep="true" transcribe="false" finishOnKey="#" timeout="5" />
-    <Say voice="Polly.Joanna">Thank you for your message. Goodbye.</Say>
-    <Hangup/>
+    <Record maxLength="300" playBeep="true" transcribe="false" finishOnKey="#" timeout="5" action="/webhooks/telephony/recording-done" method="POST" />
 </Response>"""
 
 TWIML_GOODBYE = """<?xml version="1.0" encoding="UTF-8"?>
@@ -57,6 +55,12 @@ async def call_started(
     service = CallService(db)
     await service.handle_call_started(external_call_id=CallSid, caller_phone=From)
     return _twiml(TWIML_GREET_AND_RECORD)
+
+
+@router.post("/recording-done")
+async def recording_done() -> Response:
+    """Called by Twilio when <Record> finishes. Just hangs up gracefully."""
+    return _twiml(TWIML_GOODBYE)
 
 
 @router.post("/call-ended")
