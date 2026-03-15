@@ -36,11 +36,19 @@ def _twiml(xml: str) -> Response:
 
 
 async def _verify_twilio(request: Request, signature: str | None, params: dict) -> None:
-    """Raise 403 if the Twilio signature is missing or invalid."""
+    """Raise 403 if the Twilio signature is missing or invalid.
+
+    We reconstruct the URL from settings because Railway sits behind a reverse
+    proxy and request.url reflects the internal address, not the public one
+    that Twilio signed against.
+    """
     if not signature:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing signature")
+    # Build the canonical URL Twilio signed: base webhook URL + the specific path suffix
+    path_suffix = request.url.path.replace("/webhooks/telephony", "", 1)
+    canonical_url = settings.twilio_webhook_url.rstrip("/") + path_suffix
     provider = TwilioProvider()
-    if not provider.verify_signature(url=str(request.url), params=params, signature=signature):
+    if not provider.verify_signature(url=canonical_url, params=params, signature=signature):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid signature")
 
 
