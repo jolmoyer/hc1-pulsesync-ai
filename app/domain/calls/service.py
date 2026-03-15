@@ -66,9 +66,6 @@ class CallService:
         call.duration_seconds = duration_seconds
         await self._db.flush()
 
-        # Enqueue transcription worker (import here to avoid circular dependency)
-        from app.workers.tasks.transcribe import enqueue_transcribe
-        await enqueue_transcribe(call_id=call.id, recording_url=recording_url)
         log.info("call.ended", call_id=str(call.id), duration=duration_seconds)
         return call
 

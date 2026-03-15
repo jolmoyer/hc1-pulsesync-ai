@@ -28,13 +28,14 @@ async def transcribe_call(ctx: dict, call_id: str, recording_url: str | None) ->
         callback_url=settings.transcription_callback_url,
     )
 
+    from sqlalchemy import select
     async with AsyncSessionLocal() as db:
-        transcript = Transcript(
-            call_id=call_uuid,
-            provider="deepgram",
-            provider_job_id=job_id,
-        )
-        db.add(transcript)
+        result = await db.execute(select(Transcript).where(Transcript.call_id == call_uuid))
+        transcript = result.scalar_one_or_none()
+        if transcript is None:
+            transcript = Transcript(call_id=call_uuid, provider="deepgram")
+            db.add(transcript)
+        transcript.provider_job_id = job_id
         await db.commit()
 
     log.info("transcribe.job_submitted", call_id=call_id, job_id=job_id)
