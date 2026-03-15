@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     database_url: PostgresDsn = Field(
         default="postgresql+asyncpg://pulsesync:pulsesync@localhost:5432/pulsesync"
     )
+
+    @property
+    def async_database_url(self) -> str:
+        """Always returns the asyncpg variant regardless of how DATABASE_URL was set."""
+        url = str(self.database_url)
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
     database_pool_size: int = 10
     database_max_overflow: int = 20
 
