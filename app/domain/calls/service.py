@@ -35,6 +35,14 @@ class CallService:
     async def handle_call_started(
         self, external_call_id: str, caller_phone: str
     ) -> Call:
+        # Idempotent — Twilio may fire this more than once for the same call
+        existing = await self._db.execute(
+            select(Call).where(Call.external_call_id == external_call_id)
+        )
+        call = existing.scalar_one_or_none()
+        if call is not None:
+            log.info("call.started.duplicate", external_id=external_call_id)
+            return call
         call = Call(
             external_call_id=external_call_id,
             caller_phone_encrypted=self._encryptor.encrypt(caller_phone),
