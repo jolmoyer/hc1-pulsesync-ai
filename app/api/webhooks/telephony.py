@@ -59,11 +59,16 @@ async def call_started(
 
 @router.post("/recording-done")
 async def recording_done(
+    request: Request,
     db: DBSession,
     CallSid: str = Form(...),
     RecordingUrl: str | None = Form(default=None),
+    RecordingSid: str | None = Form(default=None),
 ) -> Response:
     """Called by Twilio when <Record> finishes. Captures recording URL then hangs up."""
+    form_data = await request.form()
+    import structlog
+    structlog.get_logger(__name__).info("recording.done.fields", fields=dict(form_data))
     if RecordingUrl:
         service = CallService(db)
         call = await service._get_by_external_id(CallSid)

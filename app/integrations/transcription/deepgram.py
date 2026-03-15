@@ -18,18 +18,35 @@ class DeepgramProvider(TranscriptionProvider):
         }
 
     async def submit_job(self, recording_url: str, callback_url: str) -> str:
-        """Submit audio URL to Deepgram for async transcription."""
-        async with httpx.AsyncClient(timeout=30) as client:
+        """Download audio from Twilio (requires auth) then submit bytes to Deepgram."""
+        from app.config import get_settings
+        cfg = get_settings()
+
+        # Download audio from Twilio using basic auth
+        async with httpx.AsyncClient(timeout=60) as client:
+            audio_response = await client.get(
+                recording_url,
+                auth=(cfg.twilio_account_sid, cfg.twilio_auth_token),
+            )
+            audio_response.raise_for_status()
+            audio_bytes = audio_response.content
+
+        # Submit raw audio bytes to Deepgram
+        headers = {
+            "Authorization": f"Token {settings.deepgram_api_key}",
+            "Content-Type": "audio/wav",
+        }
+        async with httpx.AsyncClient(timeout=60) as client:
             response = await client.post(
                 f"{_DEEPGRAM_API_URL}/listen",
-                headers=self._headers,
+                headers=headers,
                 params={
                     "callback": callback_url,
                     "model": "nova-2",
                     "smart_format": "true",
                     "punctuate": "true",
                 },
-                json={"url": recording_url},
+                content=audio_bytes,
             )
             response.raise_for_status()
             data = response.json()
