@@ -58,8 +58,26 @@ async def call_started(
 
 
 @router.post("/recording-done")
-async def recording_done() -> Response:
-    """Called by Twilio when <Record> finishes. Just hangs up gracefully."""
+async def recording_done(
+    db: DBSession,
+    CallSid: str = Form(...),
+    RecordingUrl: str | None = Form(default=None),
+) -> Response:
+    """Called by Twilio when <Record> finishes. Captures recording URL then hangs up."""
+    if RecordingUrl:
+        service = CallService(db)
+        call = await service._get_by_external_id(CallSid)
+        # Store recording URL temporarily in a transcript row for the worker to pick up
+        from app.db.models.transcript import Transcript
+        from sqlalchemy import select
+        existing = await db.execute(select(Transcript).where(Transcript.call_id == call.id))
+        if existing.scalar_one_or_none() is None:
+            transcript = Transcript(call_id=call.id, provider="deepgram")
+            db.add(transcript)
+            await db.flush()
+        # Enqueue transcription immediately with the recording URL
+        from app.workers.tasks.transcribe import enqueue_transcribe
+        await enqueue_transcribe(call_id=call.id, recording_url=RecordingUrl)
     return _twiml(TWIML_GOODBYE)
 
 
