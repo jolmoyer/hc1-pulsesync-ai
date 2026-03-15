@@ -19,8 +19,8 @@ TWIML_GREET_AND_RECORD = """<?xml version="1.0" encoding="UTF-8"?>
     <Say voice="Polly.Joanna">
         Thank you for calling. Please leave a message after the tone and we will follow up shortly.
     </Say>
-    <Record maxLength="300" playBeep="true" transcribe="false" />
-    <Say>Thank you. Goodbye.</Say>
+    <Record maxLength="300" playBeep="true" transcribe="false" finishOnKey="#" timeout="5" />
+    <Say voice="Polly.Joanna">Thank you for your message. Goodbye.</Say>
     <Hangup/>
 </Response>"""
 
