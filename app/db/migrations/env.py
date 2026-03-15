@@ -20,6 +20,9 @@ target_metadata = Base.metadata
 # Override the sqlalchemy.url from the environment variable so we never
 # hard-code connection strings in alembic.ini.
 database_url = os.environ.get("DATABASE_URL", "")
+# Railway provides postgresql:// but asyncpg requires postgresql+asyncpg://
+if database_url.startswith("postgresql://"):
+    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 config.set_main_option("sqlalchemy.url", database_url)
 
 
